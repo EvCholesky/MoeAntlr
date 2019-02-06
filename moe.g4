@@ -35,13 +35,6 @@ import_directive
  | DYNAMIC_LIBRARY STRING_LIT
  ;
 
- def_test : IDENT PROC '(' parameter_list ')' ('->' typespec)? compound_statement?;
-// : IDENT PROC		'(' parameter_list ')' ('->' typespec)? (procedure_flags)* (compound_statement)* ;
-
-/*
-statement
- : def_test | ';' ;
- */
 statement
  : decl
  | definition
@@ -107,7 +100,7 @@ procedure_flags
  ;
 
 enum_constant
- : IDENT ':=' expression
+ : IDENT (':=' expression)?
  ;
 
 enum_constant_list 

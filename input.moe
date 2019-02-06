@@ -1,0 +1,9 @@
+//g_test:int
+//testthing proc (n:int) -> int { ; }
+//if a {b = c}
+//SFoo struct { m_n: s8 }
+ppFoo typedef &SFoo
+//Enk flag_enum {Ack, Foo, Bar }
+//a = b ;
+//b = c
+
