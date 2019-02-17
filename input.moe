@@ -1,9 +1,28 @@
-//g_test:int
-//testthing proc (n:int) -> int { ; }
+        123+123
+123.456+123.456
+n2=123+123
+n2=123<123
+n2= 123<123
+a =   b
+a =  b&&c
+a=b  ||  c
+//g_test/*wtf*/: int
+/*
+g_woo: s8
+g_c   
+: & test
+testthing proc (n:int) -> int { ; }
 //if a {b = c}
-//SFoo struct { m_n: s8 }
-ppFoo typedef &SFoo
+SFoo struct { m_n  : s8 }
+n2: int=1+2
+n:int=1+2*3&&true 
+n=123-2
+//SFoo struct ($N :int,  :$T) { m_n: s8 }
+//Partdef typedef SFoo($C, :$part)
+
+//ppFoo typedef &SFoo
 //Enk flag_enum {Ack, Foo, Bar }
 //a = b ;
 //b = c
 
+*/

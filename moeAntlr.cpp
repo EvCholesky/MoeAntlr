@@ -67,13 +67,17 @@ int main(int argc, const char* argv[])
 #include "antlr4-runtime.h"
 #include "Moe/MoeLexer.h"
 #include "Moe/MoeParser.h"
-#include "Moe/MoeVisitor.h"
+#include "Moe/MoeParserVisitor.h"
+#include "moeFormat.h"
  
 using namespace std;
 using namespace antlr4;
 
 int main(int argc, const char* argv[]) 
 {
+	SMoeFormatOptions mfopt;
+	MoeFormat("input.moe", mfopt);
+
     std::ifstream stream;
     stream.open("input.moe");
     
@@ -84,9 +88,9 @@ int main(int argc, const char* argv[])
  
     MoeParser::FileContext* pTree = parser.file();
 	auto str = pTree->toInfoString(&parser);
-	printf("%s\n", str.c_str());
+	//printf("%s\n", str.c_str());
 	//tree:ParseTree * pTree = parser.main();
-	printf("%s \n", pTree->toStringTree().c_str());
+	//printf("%s \n", pTree->toStringTree().c_str());
  
 //    MoeVisitPrint visitor;
 //   auto visitor.visitFile(tree);

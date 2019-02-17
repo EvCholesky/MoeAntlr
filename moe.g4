@@ -15,8 +15,8 @@
 
 // Moe grammar file for Antlr 4
 
-
-grammar Moe;
+parser grammar MoeParser;
+options { tokenVocab = MoeLexer; }
 
 // parser rules
 
@@ -44,26 +44,20 @@ statement
  | iteration_statement
  | jump_statement
  ;
-
-decl
- : parameter
- ;
  
-parameter
- : '..'
- | using_statement
- | parameter_ident_list (IMMUTABLE)? ':' typespec ('=' default_expression)?
- | (IMMUTABLE)? ':' typespec ('=' default_expression)?
- | parameter_ident_list (IMMUTABLE)? ':=' expression 
+decl
+ : using_statement
+ | decl_ident_list (IMMUTABLE)? COLON typespec ('=' default_expression)?
+ | (IMMUTABLE)? COLON typespec ('=' default_expression)?
+ | decl_ident_list (IMMUTABLE)? ':=' expression 
  ;
 
-procedure_reference_decl
- : '(' parameter_list ')' ('->' typespec)? (procedure_flags)*
- ;
+param_decl : '..' | decl ;
+procedure_reference_decl : '(' param_decl_list ')' ('->' typespec)? (procedure_flags)* ;
+generic_decl : '$' IDENT ;
 
-generic_decl
- : '$' IDENT
- ;
+decl_list : decl (',' decl)* ;
+param_decl_list : param_decl (',' param_decl)* ;
 
 array_decl
  : '[' '..' ']'
@@ -72,7 +66,7 @@ array_decl
  ;
 
 typespec
- : IDENT '(' argument_list ')'
+ : IDENT '(' typespec_argument_list ')'
  | IDENT ('.' IDENT)*
  | procedure_reference_decl
  | generic_decl 
@@ -99,36 +93,20 @@ procedure_flags
  | COMMUTATIVE
  ;
 
-enum_constant
- : IDENT (':=' expression)?
- ;
-
-enum_constant_list 
- : enum_constant (',' enum_constant)*
- ;
+enum_constant : IDENT (':=' expression)? ;
+enum_constant_list : enum_constant (',' enum_constant)* ;
 
 using_statement
  : USING IDENT ':' typespec
  | USING typespec
  ;
 
-parameter_ident
- : ('$')? IDENT 		// matches against nothing?
- ;
-
-parameter_ident_list
- : parameter_ident (',' parameter_ident)*
- ;
+decl_ident : ('$')? IDENT ;
+decl_ident_list : decl_ident (',' decl_ident)* ;
 
 default_expression
  : '---'
  | expression
- ;
-
-
-parameter_list
- : parameter
- | parameter ',' parameter
  ;
 
 struct_member_list // TODO - change the proc name in parser.cpp
@@ -137,38 +115,49 @@ struct_member_list // TODO - change the proc name in parser.cpp
  ;
 
 definition
- : IDENT PROC		'(' parameter_list ')' ('->' typespec)? (procedure_flags)* (compound_statement)*
- | overload_name 	'(' parameter_list ')' ('->' typespec)? (procedure_flags)* (compound_statement)*
- | IDENT STRUCT '(' parameter_list ')' '{' struct_member_list '}'
- | IDENT STRUCT '{' struct_member_list '}'
- | IDENT ENUM (typespec)? '{' enum_constant_list '}'				// should have ':' typespec for consistency, also... the parse is a bit sketchy, assuming '{' won't parse as a typespec
- | IDENT FLAG_ENUM (typespec)? '{' enum_constant_list '}'			// should have ':' typespec for consistency, also... the parse is a bit sketchy, assuming '{' won't parse as a typespec
- | IDENT TYPEDEF typespec
+ : IDENT PROC		'(' param_decl_list ')' ('->' typespec)? (procedure_flags)* (compound_statement)*	#procedure_definition
+ | overload_name 	'(' param_decl_list ')' ('->' typespec)? (procedure_flags)* (compound_statement)*	#procedure_definition
+ | IDENT STRUCT '(' decl_list ')' '{' struct_member_list '}'											#struct_definition
+ | IDENT STRUCT '{' struct_member_list '}'																#struct_definition
+ | IDENT ENUM (typespec)? '{' enum_constant_list '}'													#enum_definition // should have ':' typespec for consistency, also... the parse is a bit sketchy, assuming '{' won't parse as a typespec
+ | IDENT FLAG_ENUM (typespec)? '{' enum_constant_list '}'												#enum_definition // should have ':' typespec for consistency, also... the parse is a bit sketchy, assuming '{' won't parse as a typespec
+ | IDENT TYPEDEF typespec																				#typedef
  ;
 
 argument 
- : '`' IDENT logicalOr_exp   // error? can we toss extra labels in here??
+ : LABEL_TOK IDENT logicalOr_exp   // error? can we toss extra labels in here??
  | logicalOr_exp 
  ;
 
-argument_list
- : argument (',' argument)*
+argument_list : argument (',' argument)* ;
+
+
+// handling partial-generic typespecs here would require parsing an argument or a decl - 
+//  is that ambiguous? 
+//  we can parse $IDENT as a special case of dec (with implicit type) but that doesn't handle cases like ($C :$T)
+typespec_argument
+ : argument
+ | '$' IDENT (':' typespec)?		// non-specialized argument for specifying a partialized generic type with an unspecified baked value
  ;
 
+ typespec_argument_list : typespec_argument (',' typespec_argument)? ;
+
+
 primary_exp
- : IDENT
- | TRUE_TOKEN
- | FALSE_TOKEN
- | LINE_DIRECTIVE
- | FILE_DIRECTIVE
- | NULL_TOKEN
- | INTEGER_LIT
- | ':' typespec '{' expression_list '}'
- | '{' expression_list '}'
- | FLOAT_LIT
- | STRING_LIT
- | CHAR_LIT
- | '(' expression ')'
+ : IDENT									#identifier
+ | TRUE_TOKEN								#literal
+ | FALSE_TOKEN								#literal
+ | LINE_DIRECTIVE							#literal
+ | FILE_DIRECTIVE							#literal
+ | NULL_TOKEN								#literal
+ | INTEGER_LIT								#literal
+ | ':' typespec 							#type_argument
+ | ':' typespec '{' expression_list '}'		#compound_literal
+ | '{' expression_list '}'					#compound_literal
+ | FLOAT_LIT								#literal
+ | STRING_LIT								#literal
+ | CHAR_LIT									#literal
+ | '(' expression ')'						#paren_exp
  ;
 
 postfix_exp
@@ -202,7 +191,7 @@ cast_exp
  | unary_exp
  ;
 
- shift_token : '<<' | '>>' ;
+shift_token : '<<' | '>>' ;
 shift_exp
  : cast_exp (shift_token cast_exp)? ;
 
@@ -214,7 +203,7 @@ additive_token : '+' | '-' | '|' | '^' ;
 additive_exp
  : multiplicative_exp (additive_token multiplicative_exp)? ;
 
- relational_token: '<' | '>' | '<=' | '>=' | '==' | '!=' ;
+relational_token: '<' | '>' | '<=' | '>=' | '==' | '!=' ;
 relational_exp
  : additive_exp (relational_token additive_exp)? ;
 
@@ -231,7 +220,7 @@ assignment_exp
  : logicalOr_exp (assignment_token logicalOr_exp)? ;
 
 expression 
- : '`' IDENT assignment_exp			// if FEXP_AllowLiteralMemberLabel
+ : LABEL_TOK IDENT assignment_exp			// if FEXP_AllowLiteralMemberLabel
  | assignment_exp
  ;
 
@@ -245,7 +234,7 @@ expression_list
  ;
 
 label_statement
- : '`' IDENT
+ : LABEL_TOK IDENT
  ;
 
 if_statement
@@ -276,9 +265,9 @@ compound_statement
   ;
 
 iteration_statement
- : FOR parameter ';' expression ';' expression compound_statement
+ : FOR decl ';' expression ';' expression compound_statement
  | FOR expression ';' expression ';' expression compound_statement
- | FOR_EACH parameter compound_statement
+ | FOR_EACH decl compound_statement
  | FOR_EACH cast_exp '=' expression compound_statement
  | WHILE expression compound_statement
  ;
@@ -290,60 +279,3 @@ jump_statement
  | RETURN expression?
  ;
 
-//LEXER RULES
-
-
-//IDENT: [\p{Alpha}\p{General_Category=Other_Letter}] [\p{Alpha}\p{General_Category=Other_Letter}_0-9]* ;
-//IDENT: [\p{Alpha}\p{General_Category=Other_Letter}] [\p{Alpha}\p{General_Category=Other_Letter}_0-9]* ;
-
-SWITCH: 'switch' ;
-CASE: 'case' ;
-IF: 'if' ;
-ELSE: 'else' ;
-FOR: 'for' ;
-FOR_EACH: 'for_each' ;
-WHILE: 'while' ;
-CONTINUE: 'continue' ;
-BREAK: 'break' ;
-FALLTHROUGH: 'fallthrough' ;
-RETURN: 'return' ;
-IMPORT: 'import' ;
-FOREIGN_LIBRARY: 'foreign_library' ;
-STATIC_LIBRARY: 'static_library' ;
-DYNAMIC_LIBRARY: 'dynamic_library' ;
-CAST: 'cast' ;
-ACAST: 'acast' ;
-SIZEOF: 'sizeof' ;
-ALIGNOF: 'alignof' ;
-TYPEINFO: 'typeinfo' ;
-IMMUTABLE: 'immutable' ;
-PROC: 'proc' ;
-STRUCT: 'struct' ;
-ENUM: 'enum' ;
-FLAG_ENUM: 'flag_enum' ;
-TYPEDEF: 'typedef' ;
-USING: 'using' ;
-CONST: 'const' ;
-INARG: 'inarg' ;
-OPERATOR: 'operator' ;
-FOREIGN: '#foreign' ;
-CDECL: '#cdecl' ;
-STDCALL: '#stdcall' ;
-INLINE: 'inline' ;
-NO_INLINE: 'no_inline' ;
-COMMUTATIVE: '#commutative' ;
-NULL_TOKEN: 'null' ;
-TRUE_TOKEN: 'true' ;
-FALSE_TOKEN: 'false' ;
-FILE_DIRECTIVE: '#file' ;
-LINE_DIRECTIVE: '#line' ;
-
-IDENT : [A-Za-z_][A-Za-z_0-9]* ;
-STRING_LIT: '"' .*? '"' ;
-CHAR_LIT: '\'' .*? '\'' ;
-INTEGER_LIT: [0-9]+ ;
-FLOAT_LIT: [0-9]+ .[0-9] ;
-NL: [\r\n] -> channel(HIDDEN) ;
-WS: [ \t]+ -> skip ; // skip spaces, tabs, newlines
-BLOCK_COMMENT: '/*' .*? '*/' -> skip ;
-LINE_COMMENT: '//' ~[\r\n]* -> skip ;

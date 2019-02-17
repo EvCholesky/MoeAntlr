@@ -166,10 +166,21 @@
     <ClCompile Include="hello\HelloParser.cpp" />
     <ClCompile Include="hello\HelloVisitor.cpp" />
     <ClCompile Include="moeAntlr.cpp" />
-    <ClCompile Include="Moe\MoeBaseVisitor.cpp" />
+    <ClCompile Include="moeFormat.cpp" />
     <ClCompile Include="Moe\MoeLexer.cpp" />
     <ClCompile Include="Moe\MoeParser.cpp" />
-    <ClCompile Include="Moe\MoeVisitor.cpp" />
+    <ClCompile Include="Moe\MoeParserBaseListener.cpp" />
+    <ClCompile Include="Moe\MoeParserBaseVisitor.cpp" />
+    <ClCompile Include="Moe\MoeParserListener.cpp" />
+    <ClCompile Include="Moe\MoeParserVisitor.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Moe\MoeLexer.h" />
+    <ClInclude Include="Moe\MoeParser.h" />
+    <ClInclude Include="Moe\MoeParserBaseListener.h" />
+    <ClInclude Include="Moe\MoeParserBaseVisitor.h" />
+    <ClInclude Include="Moe\MoeParserListener.h" />
+    <ClInclude Include="Moe\MoeParserVisitor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
