@@ -14,7 +14,7 @@
 | OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
 lexer grammar MoeLexer;
-channels { WHITESPACE, COMMENT }
+channels { NEWLINE, WHITESPACE, COMMENT }
 
 //IDENT: [\p{Alpha}\p{General_Category=Other_Letter}] [\p{Alpha}\p{General_Category=Other_Letter}_0-9]* ;
 
@@ -65,7 +65,7 @@ STRING_LIT: '"' .*? '"' ;
 CHAR_LIT: '\'' .*? '\'' ;
 INTEGER_LIT: [1-9][0-9]* ;
 FLOAT_LIT: [0-9]+ '.'[0-9]+ ;
-NL: [\r\n] -> channel(WHITESPACE) ;
+NL: [\r\n] -> channel(NEWLINE) ;
 WS: [ \t]+ -> channel(WHITESPACE) ; // skip spaces, tabs, newlines
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(COMMENT) ;
 LINE_COMMENT: '//' ~[\r\n]* -> channel(COMMENT) ;

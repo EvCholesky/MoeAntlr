@@ -26,8 +26,8 @@ MoeFormat
 [ ] space after pointers or qualifiers inside decl
 [ ] space after proc before '('
 [ ] space before and after '->' arrow in return type
-[ ] space before and after operators 
-[ ] remove unneeded semicolons
+[x] space before and after operators 
+[x] remove unneeded semicolons
 [ ] replace four spaces with tabs
 [ ] no space before array (after primary_exp)                   
 [ ] tab alignment

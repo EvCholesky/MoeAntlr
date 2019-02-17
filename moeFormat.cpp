@@ -85,6 +85,8 @@ public:
 							,m_tsrewrite(pTs)
 								{ ; }
 
+
+	void					exitEntry(MoeParser::EntryContext * /*ctx*/) override;
 	void					enterDecl(MoeParser::DeclContext * pDeclctx) override;
 
 	void					enterShiftExpCore(MoeParser::ShiftExpCoreContext * pShiftCtx) override;
@@ -115,6 +117,53 @@ SMoeFormatOptions::SMoeFormatOptions()
 {
 }
 
+void MoeFormatListener::exitEntry(MoeParser::EntryContext * pEntryctx)
+{
+	Token * pTokStop = pEntryctx->getStop();
+	Token * pTokSemi = nullptr;
+	bool fHasNewline = false;
+
+	auto iTokIt = pTokStop->getTokenIndex() + 1;
+	while (1)
+	{
+		auto pTokIt = m_pTs->get(iTokIt); 
+		if (!pTokIt)
+			break;
+		if (pTokIt->getType() == MoeLexer::SEMICOLON)
+		{
+			pTokSemi = pTokIt;
+		}
+		else if (pTokIt->getChannel() == MoeLexer::NEWLINE)
+		{
+			/*
+			const char * pChzText = m_pTs->getText(misc::Interval(iTokIt, iTokIt+1)).c_str();
+			const char * pChzIt = pChzText;
+			while (pChzIt && *pChzIt != '\0')
+			{
+				if (*pChzIt == '\n')
+				{
+					fHasNewline = true;
+					break;
+				}
+				++pChzIt;
+			}
+			*/
+			fHasNewline = true;
+		}
+		else if (pTokIt->getChannel() != MoeLexer::WHITESPACE)
+		{
+			break;
+		}
+
+		++iTokIt;
+	}
+
+	if (pTokSemi != nullptr && fHasNewline)
+	{
+		m_tsrewrite.Delete(pTokSemi);
+	}
+}
+
 void MoeFormatListener::enterDecl(MoeParser::DeclContext * pDeclctx)
 {
 	auto pTokIdentStop = pDeclctx->decl_ident_list()->stop;
@@ -128,7 +177,7 @@ void MoeFormatListener::enterDecl(MoeParser::DeclContext * pDeclctx)
 	for (size_t iTok= iTokIdentMax + 1; iTok < iTokColon; ++iTok)
 	{
 		Token * pTok = m_pTs->get(iTok);
-		if (pTok->getChannel() != MoeLexer::WHITESPACE)
+		if (pTok->getChannel() != MoeLexer::WHITESPACE && pTok->getChannel() != MoeLexer::NEWLINE)
 		{
 			auto strType = m_pLex->getTokenNames()[pTok->getType()];
 			EmitWarning(m_pErrman, pTok, ERRID_ExpectedWhitespace, "unexpected %s, expected whitespace characters before ':'", strType.c_str());
@@ -143,7 +192,7 @@ void MoeFormatListener::enterDecl(MoeParser::DeclContext * pDeclctx)
 	for (size_t iTok= iTokColon + 1; iTok < iTokTypespec; ++iTok)
 	{
 		Token * pTok = m_pTs->get(iTok);
-		if (pTok->getChannel() != MoeLexer::WHITESPACE)
+		if (pTok->getChannel() != MoeLexer::WHITESPACE && pTok->getChannel() != MoeLexer::NEWLINE)
 		{
 			continue;
 		}
@@ -157,20 +206,11 @@ void MoeFormatListener::ReplacePrefixWhitespace(Token * pTok, const char * pChz)
 {
 	auto iTokStart = pTok->getTokenIndex();
 	auto iTokIt = iTokStart - 1;
-	auto strTok = m_pLex->getTokenNames()[pTok->getType()];
-	auto strActualTok = pTok->getText();
 
 	while (1)
 	{
 		auto pTokIt = m_pTs->get(iTokIt); 
-
-		std::string str;
-		std::string strActual = pTokIt->getText(); 
-		if (pTokIt)
-		{
-			str = m_pLex->getTokenNames()[pTokIt->getType()];
-		}
-		if (!pTokIt || pTokIt->getChannel() != MoeLexer::WHITESPACE)
+		if (!pTokIt || (pTokIt->getChannel() != MoeLexer::WHITESPACE && pTokIt->getChannel() != MoeLexer::WHITESPACE))
 			break;
 
 		m_tsrewrite.Delete(pTokIt);
@@ -186,7 +226,7 @@ void MoeFormatListener::ReplacePostfixWhitespace(Token * pTok, const char * pChz
 	while (1)
 	{
 		auto pTokIt = m_pTs->get(iTokIt); 
-		if (!pTokIt || pTokIt->getChannel() != MoeLexer::WHITESPACE)
+		if (!pTokIt || (pTokIt->getChannel() != MoeLexer::WHITESPACE && pTokIt->getChannel() != MoeLexer::WHITESPACE))
 			break;
 
 		m_tsrewrite.Delete(pTokIt);
@@ -298,31 +338,23 @@ void MoeFormatListener::enterRelationalExpCore(MoeParser::RelationalExpCoreConte
 void MoeFormatListener::enterLogicalAndExpCore(MoeParser::LogicalAndExpCoreContext * pAndctx)
 {
 	//printf("%s,", m_pParse->getRuleNames()[pAndctx->getRuleIndex()].c_str());
-#if 1
 	if (pAndctx->AND_AND() == nullptr || pAndctx->AND_AND()->getSymbol() == nullptr)
 		return; 
 
-	//auto iTok = pAndctx->AND_AND()->getSymbol()->getTokenIndex();
 	auto pTok = pAndctx->AND_AND()->getSymbol();
 	ReplacePrefixWhitespace(pTok, " ");
 	ReplacePostfixWhitespace(pTok, " ");
-#else
-#endif
 }
 
 void MoeFormatListener::enterLogicalOrExpCore(MoeParser::LogicalOrExpCoreContext * pOrctx)
 {
 	//printf("%s,", m_pParse->getRuleNames()[pOrctx->getRuleIndex()].c_str());
-#if 1
 	if (pOrctx->OR_OR() == nullptr || pOrctx->OR_OR()->getSymbol() == nullptr)
 		return;
 
-	//auto iTok = pOrctx->OR_OR()->getSymbol()->getTokenIndex();
 	auto pTok = pOrctx->OR_OR()->getSymbol();
 	ReplacePrefixWhitespace(pTok, " ");
 	ReplacePostfixWhitespace(pTok, " ");
-#else
-#endif
 }
 
 void MoeFormatListener::enterAssignmentExpCore(MoeParser::AssignmentExpCoreContext * pAssignctx)
