@@ -97,7 +97,10 @@ procedure_flags
  | COMMUTATIVE
  ;
 
-enum_constant : IDENT (COLON_EQUAL expression)? ;
+enum_constant 
+ : IDENT (COLON_EQUAL expression)?  #enum_constant_valid
+ | IDENT (EQUAL expression)? 		#enum_constant_cstyle // NOT VALID MOE SYNTAX, used by moeFormat to autocorrect.
+ ;
 enum_constant_list : enum_constant (COMMA enum_constant)* ;
 
 using_statement
@@ -168,7 +171,8 @@ postfix_exp
  : primary_exp BRACKET_OPEN expression BRACKET_CLOSE
  | primary_exp PAREN_OPEN argument_list PAREN_CLOSE
  | primary_exp PAREN_OPEN PAREN_CLOSE
- | primary_exp PERIOD 
+ | primary_exp PERIOD IDENT
+ | primary_exp ARROW IDENT // not valid Moe, used by MoeFormat to replace '->' with '.'
  | primary_exp ADD_ADD
  | primary_exp SUB_SUB
  | primary_exp

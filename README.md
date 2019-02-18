@@ -24,12 +24,14 @@ MoeFormat
 [ ] 	except single line (ensure all cases match the single line requirement?)
 [x] decl has space after the identifier, colon with no space before type
 [ ] space after pointers or qualifiers inside decl
-[ ] space after proc before '('
-[ ] space before and after '->' arrow in return type
+[x] space after proc before '('
+[x] space before and after '->' arrow in return type
 [x] space before and after operators 
 [x] remove unneeded semicolons
+[x] replace c-style pointer dereference '->' with moe style '.'
+[x] replace c-style enum constant initializer '=' with ':='
 [ ] replace four spaces with tabs
-[ ] no space before array (after primary_exp)                   
+[x] no space before array (after primary_exp)                   
 [ ] tab alignment
 [ ]	- enum constant values
 [ ] - single line switch bodies 

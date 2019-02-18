@@ -6,12 +6,18 @@ n2= 123<123
 a =   b
 a =  b&&c
 a=b  ||  c
+testthing proc(n:int)->int { ; }
+pFoo-> m_a
+pFoo . m_b
+aN [ 12 ]
+testthing ( 1 )
+
+Enk flag_enum {Ack, Foo=2, Bar }
 //g_test/*wtf*/: int
 /*
 g_woo: s8
 g_c   
 : & test
-testthing proc (n:int) -> int { ; }
 //if a {b = c}
 SFoo struct { m_n  : s8 }
 n2: int=1+2

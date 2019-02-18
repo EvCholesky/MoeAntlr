@@ -86,8 +86,12 @@ public:
 								{ ; }
 
 
-	void					exitEntry(MoeParser::EntryContext * /*ctx*/) override;
+	void					exitEntry(MoeParser::EntryContext * pEntryctx) override;
 	void					enterDecl(MoeParser::DeclContext * pDeclctx) override;
+	void					enterProcedure_definition(MoeParser::Procedure_definitionContext * pProcdefctx) override;
+	void					enterPostfix_exp(MoeParser::Postfix_expContext * pPostctx) override;
+
+	void					enterEnum_constant_cstyle(MoeParser::Enum_constant_cstyleContext * pEnumcctx) override;
 
 	void					enterShiftExpCore(MoeParser::ShiftExpCoreContext * pShiftCtx) override;
 	void					enterMultiplicativeExpCore(MoeParser::MultiplicativeExpCoreContext * pMulctx) override;
@@ -135,19 +139,6 @@ void MoeFormatListener::exitEntry(MoeParser::EntryContext * pEntryctx)
 		}
 		else if (pTokIt->getChannel() == MoeLexer::NEWLINE)
 		{
-			/*
-			const char * pChzText = m_pTs->getText(misc::Interval(iTokIt, iTokIt+1)).c_str();
-			const char * pChzIt = pChzText;
-			while (pChzIt && *pChzIt != '\0')
-			{
-				if (*pChzIt == '\n')
-				{
-					fHasNewline = true;
-					break;
-				}
-				++pChzIt;
-			}
-			*/
 			fHasNewline = true;
 		}
 		else if (pTokIt->getChannel() != MoeLexer::WHITESPACE)
@@ -202,6 +193,71 @@ void MoeFormatListener::enterDecl(MoeParser::DeclContext * pDeclctx)
 	//printf("typespec = %lld, %lld, %lld\n", iTokIdentMax, iTokColon, iTokTypespec);
 }
 
+void MoeFormatListener::enterProcedure_definition(MoeParser::Procedure_definitionContext * pProcdefctx)
+{
+	auto pTokProc = pProcdefctx->PROC()->getSymbol();
+	ReplacePrefixWhitespace(pTokProc, " ");
+	ReplacePostfixWhitespace(pTokProc, " ");
+
+	if (pProcdefctx->ARROW())
+	{
+		auto pTokArrow = pProcdefctx->ARROW()->getSymbol();
+		ReplacePrefixWhitespace(pTokArrow, " ");
+		ReplacePostfixWhitespace(pTokArrow, " ");
+	}
+}
+
+void MoeFormatListener::enterPostfix_exp(MoeParser::Postfix_expContext * pPostctx)
+{
+	if (pPostctx->ARROW())
+	{
+		auto pTokArrow = pPostctx->ARROW()->getSymbol();
+		m_tsrewrite.replace(pTokArrow, ".");
+		ReplacePrefixWhitespace(pTokArrow, "");
+		ReplacePostfixWhitespace(pTokArrow, "");
+	}
+	else if (pPostctx->PERIOD())
+	{
+		auto pTokPeriod = pPostctx->PERIOD()->getSymbol();
+		ReplacePrefixWhitespace(pTokPeriod, "");
+		ReplacePostfixWhitespace(pTokPeriod, "");
+	}
+	else if (pPostctx->ADD_ADD())
+	{
+		auto pTokAdd = pPostctx->ADD_ADD()->getSymbol();
+		ReplacePrefixWhitespace(pTokAdd, "");
+	}
+	else if (pPostctx->SUB_SUB())
+	{
+		auto pTokSub = pPostctx->SUB_SUB()->getSymbol();
+		ReplacePrefixWhitespace(pTokSub, "");
+	}
+	else if (pPostctx->BRACKET_OPEN())
+	{
+		auto pTokBracket = pPostctx->BRACKET_OPEN()->getSymbol();
+		ReplacePrefixWhitespace(pTokBracket, "");
+		ReplacePostfixWhitespace(pTokBracket, "");
+
+		if (pPostctx->BRACKET_CLOSE())
+		{
+			pTokBracket = pPostctx->BRACKET_CLOSE()->getSymbol();
+			ReplacePrefixWhitespace(pTokBracket, "");
+		}
+	}
+	else if (pPostctx->PAREN_OPEN())
+	{
+		auto pTokParen = pPostctx->PAREN_OPEN()->getSymbol();
+		ReplacePrefixWhitespace(pTokParen, "");
+		ReplacePostfixWhitespace(pTokParen, "");
+
+		if (pPostctx->PAREN_CLOSE())
+		{
+			pTokParen = pPostctx->PAREN_CLOSE()->getSymbol();
+			ReplacePrefixWhitespace(pTokParen, "");
+		}
+	}
+}
+
 void MoeFormatListener::ReplacePrefixWhitespace(Token * pTok, const char * pChz)
 {
 	auto iTokStart = pTok->getTokenIndex();
@@ -216,7 +272,10 @@ void MoeFormatListener::ReplacePrefixWhitespace(Token * pTok, const char * pChz)
 		m_tsrewrite.Delete(pTokIt);
 		--iTokIt;
 	}
-	m_tsrewrite.insertBefore(iTokStart, pChz);
+	if (pChz[0] != '\0')
+	{
+		m_tsrewrite.insertBefore(iTokStart, pChz);
+	}
 }
 
 void MoeFormatListener::ReplacePostfixWhitespace(Token * pTok, const char * pChz)
@@ -232,7 +291,19 @@ void MoeFormatListener::ReplacePostfixWhitespace(Token * pTok, const char * pChz
 		m_tsrewrite.Delete(pTokIt);
 		++iTokIt;
 	}
-	m_tsrewrite.insertAfter(iTokStop, pChz);
+	if (pChz[0] != '\0')
+	{
+		m_tsrewrite.insertAfter(iTokStop, pChz);
+	}
+}
+
+void MoeFormatListener::enterEnum_constant_cstyle(MoeParser::Enum_constant_cstyleContext * pEnumcctx)
+{
+	if (pEnumcctx->EQUAL())
+	{
+		auto pTok = pEnumcctx->EQUAL()->getSymbol();
+		m_tsrewrite.replace(pTok, ":=");
+	}
 }
 
 void MoeFormatListener::enterShiftExpCore(MoeParser::ShiftExpCoreContext * pShiftctx)
