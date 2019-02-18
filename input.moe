@@ -1,3 +1,22 @@
+if 1
+{
+if true
+{
+a = b
+}
+else
+{
+c=@pFoo
+}
+}
+
+if test
+	{ something }
+else
+{ 
+	test
+}
+
         123+123; 
  123.456+123.456
 n2=123+123

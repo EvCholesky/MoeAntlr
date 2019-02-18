@@ -450,6 +450,87 @@ void MoeFormatListener::enterAssignmentExpCore(MoeParser::AssignmentExpCoreConte
 	}
 }
 
+void PerformTabAlignment(const char * pChzFile, SErrorManager * pErrman)
+{
+    ANTLRInputStream input(pChzFile);
+    MoeLexer lexer(&input);
+    CommonTokenStream ts(&lexer);
+    MoeParser parser(&ts);    
+
+    MoeParser::FileContext* pTree = parser.file();
+
+	TokenStreamRewriter	tsrewrite(&ts);
+
+	// walk the token stream and at each newline remove any leading whitespace and add the right nummber of tabs
+	int cTab = 0;
+	int iTok = 0;
+	while (1)
+	{
+		auto pTok = ts.get(iTok++);
+		while (pTok->getChannel() == MoeLexer::WHITESPACE)
+		{
+			if (pTok->getType() == MoeLexer::EOF)
+				goto done;
+
+			tsrewrite.Delete(pTok);
+			pTok = ts.get(iTok++);
+		}
+
+		if (pTok->getType() == MoeLexer::EOF)
+			goto done;
+
+		// if this line starts with a CURLY_CLOSE move this line back a tab
+		int cTabCur = (pTok->getType() == MoeLexer::CURLY_CLOSE) ? cTab - 1 : cTab;
+
+		// walk the current line and check to see if it's a one line block
+		if (pTok->getType() == MoeLexer::CURLY_OPEN)
+		{
+			int iTokLine = iTok;
+			int cTabLine = 1;
+			auto pTokLine = pTok;
+			while (pTokLine->getChannel() != MoeLexer::NEWLINE)
+			{
+				if (pTokLine->getType() == MoeLexer::EOF)
+					break;
+
+				if (pTokLine->getType() == MoeLexer::CURLY_OPEN)
+					++cTabLine;
+
+				if (pTokLine->getType() == MoeLexer::CURLY_CLOSE)
+					--cTabLine;
+				pTokLine = ts.get(iTokLine++);
+			}
+
+			if (cTabLine <= 1)
+				++cTabCur;
+		}
+
+		std::string strTab;
+		for (int iTab = 0; iTab < cTabCur; ++iTab)
+		{
+			strTab += "\t";
+		}
+
+		tsrewrite.insertBefore(iTok-1, strTab);
+
+		while (pTok->getChannel() != MoeLexer::NEWLINE)
+		{
+			if (pTok->getType() == MoeLexer::EOF)
+				goto done;
+
+			if (pTok->getType() == MoeLexer::CURLY_OPEN)
+				++cTab;
+
+			if (pTok->getType() == MoeLexer::CURLY_CLOSE)
+				--cTab;
+			pTok = ts.get(iTok++);
+		}
+	}
+done:
+	;
+	printf("%s\n", tsrewrite.getText().c_str());
+}
+
 void MoeFormat(const char * pChzFilename, const SMoeFormatOptions & mfopt) 
 {
     std::ifstream stream;
@@ -466,9 +547,11 @@ void MoeFormat(const char * pChzFilename, const SMoeFormatOptions & mfopt)
 
 	tree::ParseTreeWalker::DEFAULT.walk(&mflist, pTree);
 
-	printf("\n%d error(s), %d warning(s)\n\n", errman.m_cError, errman.m_cWarning);
+	PerformTabAlignment(mflist.m_tsrewrite.getText().c_str(), &errman);
+
+	//printf("\n%d error(s), %d warning(s)\n\n", errman.m_cError, errman.m_cWarning);
 	if (errman.m_cError == 0)
 	{
-		printf("%s\n", mflist.m_tsrewrite.getText().c_str());
+	//	printf("%s\n", mflist.m_tsrewrite.getText().c_str());
 	}
 }
