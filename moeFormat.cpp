@@ -85,11 +85,11 @@ public:
 							,m_tsrewrite(pTs)
 								{ ; }
 
-
 	void					exitEntry(MoeParser::EntryContext * pEntryctx) override;
 	void					enterDecl(MoeParser::DeclContext * pDeclctx) override;
 	void					enterProcedure_definition(MoeParser::Procedure_definitionContext * pProcdefctx) override;
-	void					enterPostfix_exp(MoeParser::Postfix_expContext * pPostctx) override;
+	void					enterPostfix_tail(MoeParser::Postfix_tailContext * pPostctx) override;
+	void					enterTypespec(MoeParser::TypespecContext * pTypespectx) override;
 
 	void					enterEnum_constant_cstyle(MoeParser::Enum_constant_cstyleContext * pEnumcctx) override;
 
@@ -157,6 +157,27 @@ void MoeFormatListener::exitEntry(MoeParser::EntryContext * pEntryctx)
 
 void MoeFormatListener::enterDecl(MoeParser::DeclContext * pDeclctx)
 {
+	if (pDeclctx->COLON())
+	{
+		auto pTokColon = pDeclctx->COLON()->getSymbol();
+		ReplacePrefixWhitespace(pTokColon, " ");
+		ReplacePostfixWhitespace(pTokColon, "");
+	}
+	else if (pDeclctx->COLON_EQUAL())
+	{
+		auto pTokColon = pDeclctx->COLON_EQUAL()->getSymbol();
+		ReplacePrefixWhitespace(pTokColon, " ");
+		ReplacePostfixWhitespace(pTokColon, " ");
+	}
+
+	if (pDeclctx->EQUAL())
+	{
+		auto pTokEqual = pDeclctx->EQUAL()->getSymbol();
+		ReplacePrefixWhitespace(pTokEqual, " ");
+		ReplacePostfixWhitespace(pTokEqual, " ");
+	}
+
+	/*
 	auto pTokIdentStop = pDeclctx->decl_ident_list()->stop;
 	auto pTokColon = pDeclctx->COLON()->getSymbol();
 	auto pTokTypespec = pDeclctx->typespec()->start;
@@ -190,6 +211,7 @@ void MoeFormatListener::enterDecl(MoeParser::DeclContext * pDeclctx)
 
 		m_tsrewrite.Delete(pTok);
 	}
+	*/
 	//printf("typespec = %lld, %lld, %lld\n", iTokIdentMax, iTokColon, iTokTypespec);
 }
 
@@ -207,7 +229,7 @@ void MoeFormatListener::enterProcedure_definition(MoeParser::Procedure_definitio
 	}
 }
 
-void MoeFormatListener::enterPostfix_exp(MoeParser::Postfix_expContext * pPostctx)
+void MoeFormatListener::enterPostfix_tail(MoeParser::Postfix_tailContext * pPostctx)
 {
 	if (pPostctx->ARROW())
 	{
@@ -255,6 +277,16 @@ void MoeFormatListener::enterPostfix_exp(MoeParser::Postfix_expContext * pPostct
 			pTokParen = pPostctx->PAREN_CLOSE()->getSymbol();
 			ReplacePrefixWhitespace(pTokParen, "");
 		}
+	}
+}
+
+void MoeFormatListener::enterTypespec(MoeParser::TypespecContext * pTypespecctx)
+{
+	if (pTypespecctx->AND_AND())
+	{
+		// really?? I'm not sure I like this, and the compiler can handle it...
+		auto pTok = pTypespecctx->AND_AND()->getSymbol();
+		m_tsrewrite.replace(pTok, "& &");
 	}
 }
 
@@ -450,7 +482,7 @@ void MoeFormatListener::enterAssignmentExpCore(MoeParser::AssignmentExpCoreConte
 	}
 }
 
-void PerformTabAlignment(const char * pChzFile, SErrorManager * pErrman)
+void PerformTabAlignment(const char * pChzFile, SErrorManager * pErrman, std::string * pStr)
 {
     ANTLRInputStream input(pChzFile);
     MoeLexer lexer(&input);
@@ -505,13 +537,15 @@ void PerformTabAlignment(const char * pChzFile, SErrorManager * pErrman)
 				++cTabCur;
 		}
 
-		std::string strTab;
-		for (int iTab = 0; iTab < cTabCur; ++iTab)
+		if (pTok->getChannel() != MoeLexer::NEWLINE)
 		{
-			strTab += "\t";
+			std::string strTab;
+			for (int iTab = 0; iTab < cTabCur; ++iTab)
+			{
+				strTab += "\t";
+			}
+			tsrewrite.insertBefore(iTok-1, strTab);
 		}
-
-		tsrewrite.insertBefore(iTok-1, strTab);
 
 		while (pTok->getChannel() != MoeLexer::NEWLINE)
 		{
@@ -528,15 +562,16 @@ void PerformTabAlignment(const char * pChzFile, SErrorManager * pErrman)
 	}
 done:
 	;
-	printf("%s\n", tsrewrite.getText().c_str());
+	//printf("%s\n", tsrewrite.getText().c_str());
+	*pStr = tsrewrite.getText();
 }
 
-void MoeFormat(const char * pChzFilename, const SMoeFormatOptions & mfopt) 
+void MoeFormat(const char * pChzFilenameIn, const SMoeFormatOptions & mfopt, const char * pChzFilenameOut) 
 {
-    std::ifstream stream;
-    stream.open(pChzFilename);
+    std::ifstream ifstream;
+    ifstream.open(pChzFilenameIn);
     
-    ANTLRInputStream input(stream);
+    ANTLRInputStream input(ifstream);
     MoeLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
     MoeParser parser(&tokens);    
@@ -547,11 +582,16 @@ void MoeFormat(const char * pChzFilename, const SMoeFormatOptions & mfopt)
 
 	tree::ParseTreeWalker::DEFAULT.walk(&mflist, pTree);
 
-	PerformTabAlignment(mflist.m_tsrewrite.getText().c_str(), &errman);
+	std::string strOut;
+	PerformTabAlignment(mflist.m_tsrewrite.getText().c_str(), &errman, &strOut);
 
 	//printf("\n%d error(s), %d warning(s)\n\n", errman.m_cError, errman.m_cWarning);
 	if (errman.m_cError == 0)
 	{
 	//	printf("%s\n", mflist.m_tsrewrite.getText().c_str());
 	}
+
+	std::ofstream ofstream;
+	ofstream.open(pChzFilenameOut);
+	ofstream << strOut;
 }

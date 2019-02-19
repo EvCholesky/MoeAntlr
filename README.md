@@ -32,6 +32,7 @@ h2. MoeFormat
 - [x] replace c-style pointer dereference '->' with moe style '.'
 - [x] replace c-style enum constant initializer '=' with ':='
 - [ ] replace four spaces with tabs
+- [ ] clean up trailing commas in enum constant list
 - [x] no space before array (after primary_exp)                   
 - [ ] tab alignment
 - [ ] - enum constant values

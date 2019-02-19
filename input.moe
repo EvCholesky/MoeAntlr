@@ -1,3 +1,11 @@
+foo proc ()
+{
+	{
+		xMid := true
+	}
+}
+
+/*
 if 1
 {
 if true
@@ -15,7 +23,7 @@ if test
 else
 { 
 	test
-}
+}*/
 
         123+123; 
  123.456+123.456

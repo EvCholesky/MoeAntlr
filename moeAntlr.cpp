@@ -1,66 +1,18 @@
-// moeAntlr.cpp : Defines the entry point for the console application.
+/* Copyright (C) 2019 Evan Christensen
+|
+| Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
+| documentation files (the "Software"), to deal in the Software without restriction, including without limitation the 
+| rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit 
+| persons to whom the Software is furnished to do so, subject to the following conditions:
+| 
+| The above copyright notice and this permission notice shall be included in all copies or substantial portions of the 
+| Software.
+| 
+| THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+| WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+| COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+| OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
-
-#define HELLO_TEST 0
-#if HELLO_TEST
-#include <iostream>
-#include "stdio.h"
- 
-#include "antlr4-runtime.h"
-#include "hello/HelloLexer.h"
-#include "hello/HelloParser.h"
-#include "hello/HelloVisitor.h"
- 
-using namespace std;
-using namespace antlr4;
-
-class  HelloVisitPrint : public HelloVisitor
-{
-public:
-
-	virtual antlrcpp::Any visitFile(HelloParser::FileContext *context)
-	{
-	    //vector<rule> elements;
-	    
-	    for (auto entry : context->entry()) 
-		{                
-	        antlrcpp::Any el = visitEntry(entry);
-	 
-	     //   elements.push_back(el); 
-	    }    
-	         
-	    //antlrcpp::Any result = Scene(ctx->name()->NAME()->getText(), elements);
-	    
-		//return result;
-		return antlrcpp::Any();
-	}
-
-    virtual antlrcpp::Any visitEntry(HelloParser::EntryContext *context)
-	{
-		auto text = context->ID()->getText();
-		printf("%s\n", context->ID()->getText().c_str());
-		return antlrcpp::Any();
-	}
-};
- 
-int main(int argc, const char* argv[]) 
-{
-    std::ifstream stream;
-    stream.open("input.hello");
-    
-    ANTLRInputStream input(stream);
-    HelloLexer lexer(&input);
-    CommonTokenStream tokens(&lexer);
-    HelloParser parser(&tokens);    
- 
-    HelloParser::FileContext* tree = parser.file();
- 
-    HelloVisitPrint visitor;
-    visitor.visitFile(tree);
- 
-    return 0;
-}
-#else
 #include <iostream>
 #include "stdio.h"
  
@@ -76,7 +28,8 @@ using namespace antlr4;
 int main(int argc, const char* argv[]) 
 {
 	SMoeFormatOptions mfopt;
-	MoeFormat("input.moe", mfopt);
+	MoeFormat("c:\\code\\moe\\moeSource\\doc.moe", mfopt, "c:\\code\\moeAntlr\\docFormat.moe");
+	//MoeFormat("input.moe", mfopt, "inputFormat.moe");
 
     std::ifstream stream;
     stream.open("input.moe");
@@ -97,4 +50,3 @@ int main(int argc, const char* argv[])
  
     return 0;
 }
-#endif

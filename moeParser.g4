@@ -36,7 +36,8 @@ import_directive
  ;
 
 statement
- : decl
+ : compound_statement
+ | decl
  | definition
  | expression_statement
  | label_statement
@@ -71,6 +72,7 @@ typespec
  | procedure_reference_decl
  | generic_decl 
  | AND typespec
+ | AND_AND typespec		// the lexer will often parse pointer to pointer this way, moeFormat can space them out
  | CONST typespec
  | INARG typespec
  | array_decl typespec
@@ -99,9 +101,9 @@ procedure_flags
 
 enum_constant 
  : IDENT (COLON_EQUAL expression)?  #enum_constant_valid
- | IDENT (EQUAL expression)? 		#enum_constant_cstyle // NOT VALID MOE SYNTAX, used by moeFormat to autocorrect.
+ | IDENT (EQUAL expression)? 		#enum_constant_cstyle 		// NOT VALID MOE SYNTAX, used by moeFormat to autocorrect.
  ;
-enum_constant_list : enum_constant (COMMA enum_constant)* ;
+enum_constant_list : enum_constant (COMMA enum_constant?)* ;	// allow trailing comma
 
 using_statement
  : USING IDENT COLON typespec
@@ -116,14 +118,15 @@ default_expression
  | expression
  ;
 
-struct_member_list // TODO - change the proc name in parser.cpp
+struct_member // TODO - change the proc name in parser.cpp
  : decl
  | definition
  ;
+ struct_member_list: struct_member* ;
 
 definition
- : IDENT PROC		PAREN_OPEN param_decl_list PAREN_CLOSE (ARROW typespec)? (procedure_flags)* (compound_statement)*	#procedure_definition
- | overload_name 	PAREN_OPEN param_decl_list PAREN_CLOSE (ARROW typespec)? (procedure_flags)* (compound_statement)*	#procedure_definition
+ : IDENT PROC		PAREN_OPEN param_decl_list? PAREN_CLOSE (ARROW typespec)? (procedure_flags)* (compound_statement)*	#procedure_definition
+ | overload_name 	PAREN_OPEN param_decl_list? PAREN_CLOSE (ARROW typespec)? (procedure_flags)* (compound_statement)*	#procedure_definition
  | IDENT STRUCT PAREN_OPEN decl_list PAREN_CLOSE CURLY_OPEN struct_member_list CURLY_CLOSE								#struct_definition
  | IDENT STRUCT CURLY_OPEN struct_member_list CURLY_CLOSE																#struct_definition
  | IDENT ENUM (typespec)? CURLY_OPEN enum_constant_list CURLY_CLOSE														#enum_definition // should have ':' typespec for consistency, also... the parse is a bit sketchy, assuming '{' won't parse as a typespec
@@ -158,6 +161,7 @@ primary_exp
  | FILE_DIRECTIVE												#literal
  | NULL_TOKEN													#literal
  | INTEGER_LIT													#literal
+ | HEX_LIT														#literal
  | COLON typespec 												#type_argument
  | COLON typespec CURLY_OPEN expression_list CURLY_CLOSE		#compound_literal
  | CURLY_OPEN expression_list CURLY_CLOSE						#compound_literal
@@ -167,16 +171,16 @@ primary_exp
  | PAREN_OPEN expression PAREN_CLOSE							#paren_exp
  ;
 
-postfix_exp
- : primary_exp BRACKET_OPEN expression BRACKET_CLOSE
- | primary_exp PAREN_OPEN argument_list PAREN_CLOSE
- | primary_exp PAREN_OPEN PAREN_CLOSE
- | primary_exp PERIOD IDENT
- | primary_exp ARROW IDENT // not valid Moe, used by MoeFormat to replace '->' with '.'
- | primary_exp ADD_ADD
- | primary_exp SUB_SUB
- | primary_exp
+postfix_tail
+ : BRACKET_OPEN expression BRACKET_CLOSE
+ | PAREN_OPEN argument_list PAREN_CLOSE
+ | PAREN_OPEN PAREN_CLOSE
+ | PERIOD IDENT
+ | ARROW IDENT // not valid Moe, used by MoeFormat to replace '->' with '.'
+ | ADD_ADD
+ | SUB_SUB
  ;
+postfix_exp : primary_exp postfix_tail*;
 
 unary_exp
  : SIZEOF PAREN_OPEN unary_exp PAREN_CLOSE
@@ -184,8 +188,8 @@ unary_exp
  | TYPEINFO PAREN_OPEN unary_exp PAREN_CLOSE
  | DEREF unary_exp
  | AND unary_exp
- //| ADD unary_exp
-// | SUB unary_exp
+ | ADD unary_exp
+ | SUB unary_exp
  | TILDE unary_exp
  | EXCLAIMATION unary_exp
  | ADD_ADD unary_exp
@@ -289,8 +293,8 @@ case_label
  ;
 
 case_statement 
- : CASE case_label COLON statement
- | ELSE COLON statement
+ : CASE case_label COLON statement*
+ | ELSE COLON statement*
  ;
 
 switch_statement
@@ -307,8 +311,8 @@ compound_statement
   ;
 
 iteration_statement
- : FOR decl SEMICOLON expression SEMICOLON expression compound_statement
- | FOR expression SEMICOLON expression SEMICOLON expression compound_statement
+ : FOR decl? SEMICOLON expression SEMICOLON expression_statement? compound_statement
+ | FOR expression SEMICOLON expression SEMICOLON expression_statement? compound_statement
  | FOR_EACH decl compound_statement
  | FOR_EACH cast_exp EQUAL expression compound_statement
  | WHILE expression compound_statement
